@@ -178,14 +178,14 @@ export default function LookbookPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Avatar Image */}
               <div className="lg:col-span-1">
-                <Card className="bg-white-soft">
-                  <CardHeader>
+                <Card className="bg-white-soft p-0">
+                  <CardHeader className="p-6">
                     <CardTitle>Your Avatar</CardTitle>
                     <CardDescription>
                       Last updated {formatDate(avatar.updated_at)}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-6 pt-0">
                     <div className="aspect-square relative rounded-lg overflow-hidden bg-gray-soft">
                       <Image
                         src={avatar.image_url}
@@ -207,14 +207,14 @@ export default function LookbookPage() {
 
               {/* Measurements Summary */}
               <div className="lg:col-span-2">
-                <Card className="bg-white-soft">
-                  <CardHeader>
+                <Card className="bg-white-soft p-0">
+                  <CardHeader className="p-6">
                     <CardTitle>Body Measurements</CardTitle>
                     <CardDescription>
                       Used for accurate sizing recommendations
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="p-6 pt-0 space-y-6">
                     {/* Required Measurements */}
                     <div>
                       <h3 className="text-sm font-semibold text-foreground mb-3">

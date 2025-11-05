@@ -64,7 +64,7 @@ export function LookbooksDrawerGrid({
           </div>
 
           {/* Content */}
-          <div className="px-3 py-2">
+          <div className="px-4 py-3">
             {/* Title */}
             <h3 className="text-sm font-semibold text-black-soft line-clamp-2">
               {lookbook.title}

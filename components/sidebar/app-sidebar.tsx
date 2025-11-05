@@ -6,10 +6,9 @@ import SidebarChatHistory from "./sidebar-chat-history";
 import { NavUser } from "./nav-user";
 import Image from "next/image";
 import Link from "next/link";
-import { PanelRightOpen, PanelRightClose, Search, ShoppingBag, BookOpen, Archive, Sparkles } from "lucide-react";
+import { PanelRightOpen, PanelRightClose, Search, ShoppingBag, BookOpen, Archive } from "lucide-react";
 import { TooltipIconButton } from "../ui/tooltip-icon-button";
 import { SearchCommandDialog } from "../search-command-dialog";
-import { Badge } from "../ui/badge";
 import { useState } from "react";
 
 interface ChatSidebarProps {
@@ -61,26 +60,10 @@ export default function ChatSidebar({ chatHistoryOpen, toggleSidebar, isLargeScr
                   </button>
                 </li>
                 <li>
-                  <div className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm opacity-60 cursor-not-allowed">
-                    <div className="flex items-center gap-2">
-                      <ShoppingBag className="size-4 text-muted-foreground" />
-                      <span>Browse products</span>
-                    </div>
-                    <Badge variant="secondary" className="bg-black text-white text-[10px] px-1.5 py-0 h-4 border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                      Coming
-                    </Badge>
-                  </div>
-                </li>
-                <li>
-                  <div className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm opacity-60 cursor-not-allowed">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="size-4 text-muted-foreground" />
-                      <span>Inspiration</span>
-                    </div>
-                    <Badge variant="secondary" className="bg-black text-white text-[10px] px-1.5 py-0 h-4 border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                      Coming
-                    </Badge>
-                  </div>
+                  <Link href="/products" className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+                    <ShoppingBag className="size-4 text-muted-foreground" />
+                    <span>Browse products</span>
+                  </Link>
                 </li>
                 <li>
                   <Link href="/lookbook" className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
@@ -156,15 +139,10 @@ export default function ChatSidebar({ chatHistoryOpen, toggleSidebar, isLargeScr
                       </button>
                     </li>
                     <li>
-                      <div className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm opacity-60 cursor-not-allowed">
-                        <div className="flex items-center gap-2">
-                          <ShoppingBag className="size-4 text-muted-foreground" />
-                          <span>Browse products</span>
-                        </div>
-                        <Badge variant="secondary" className="bg-black text-white-soft text-[10px] px-1.5 py-0 h-4 border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                          Coming Soon
-                        </Badge>
-                      </div>
+                      <Link href="/products" className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+                        <ShoppingBag className="size-4 text-muted-foreground" />
+                        <span>Browse products</span>
+                      </Link>
                     </li>
                     <li>
                       <Link href="/lookbook" className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
@@ -177,17 +155,6 @@ export default function ChatSidebar({ chatHistoryOpen, toggleSidebar, isLargeScr
                         <Archive className="size-4 text-muted-foreground" />
                         <span>Wardrobe</span>
                       </Link>
-                    </li>
-                    <li>
-                      <div className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm opacity-60 cursor-not-allowed">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="size-4 text-muted-foreground" />
-                          <span>Inspiration</span>
-                        </div>
-                        <Badge variant="secondary" className="bg-black-soft text-white-soft text-[10px] px-1.5 py-0 h-4 border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-                          Coming Soon
-                        </Badge>
-                      </div>
                     </li>
                   </ul>
                 </nav>

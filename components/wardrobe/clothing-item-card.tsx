@@ -76,18 +76,18 @@ export function ClothingItemCard({
       {/* Content - Only Title, Brand, Category */}
       <div className="px-4 py-3">
         {/* Title */}
-        <h3 className="text-xl font-bold text-black-soft line-clamp-2">
+        <h3 className="text-sm font-semibold text-black-soft line-clamp-2">
           {item.name}
         </h3>
 
         {/* Brand */}
         {item.brand && (
-          <p className="text-base text-gray-600 line-clamp-1">{item.brand}</p>
+          <p className="text-xs text-gray-600 line-clamp-1">{item.brand}</p>
         )}
 
         {/* Category badge - moved to bottom */}
-        <div className="mt-3">
-          <Badge variant="secondary" className="capitalize px-3 py-1">
+        <div className="mt-2">
+          <Badge variant="secondary" className="capitalize text-xs px-2 py-0.5">
             {item.category}
           </Badge>
         </div>
