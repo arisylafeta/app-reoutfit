@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button"
 import { createClient } from "@/utils/supabase/client"
 import { logout } from "@/app/(auth)/actions"
 import { getProfileCached, clearProfileCache } from "@/lib/profile-cache"
+import { SupportDialog } from "@/components/support/support-dialog"
 
 function getInitials(name?: string) {
   if (!name) return "U"
@@ -55,6 +56,7 @@ export function NavUser({ isLargeScreen }: NavUserProps) {
     email: string
     avatar?: string
   } | null>(null)
+  const [supportDialogOpen, setSupportDialogOpen] = React.useState(false)
 
   React.useEffect(() => {
     const supabase = createClient()
@@ -87,6 +89,7 @@ export function NavUser({ isLargeScreen }: NavUserProps) {
 
   // User menu (full view only)
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -136,11 +139,12 @@ export function NavUser({ isLargeScreen }: NavUserProps) {
                   Billing
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild className="gap-2">
-                <Link href="/support" className="flex items-center">
-                  <LifeBuoy className="size-4 text-muted-foreground mr-2" strokeWidth={1.5} />
-                  Support
-                </Link>
+              <DropdownMenuItem 
+                className="gap-2 cursor-pointer"
+                onSelect={() => setSupportDialogOpen(true)}
+              >
+                <LifeBuoy className="size-4 text-muted-foreground mr-2" strokeWidth={1.5} />
+                Support
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -170,6 +174,8 @@ export function NavUser({ isLargeScreen }: NavUserProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
     </DropdownMenu>
+    <SupportDialog open={supportDialogOpen} onOpenChange={setSupportDialogOpen} />
+    </>
   )
 }
 
