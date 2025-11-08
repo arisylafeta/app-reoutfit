@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { getUserCredits, deductCredits, InsufficientCreditsError } from '@/lib/db/credits';
 
 /**
  * POST /api/products/enrich
@@ -46,6 +47,37 @@ export async function POST(request: NextRequest) {
         { error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+
+    // Credit check (2 credits for enrichment, regardless of cache)
+    const COST = 2;
+    try {
+      const balance = await getUserCredits(user.id);
+      if (balance < COST) {
+        return NextResponse.json(
+          {
+            error: 'Insufficient credits',
+            required: COST,
+            available: balance,
+          },
+          { status: 402 }
+        );
+      }
+
+      // Deduct credits (even if we return cached data)
+      await deductCredits(user.id, COST, 'enrich-product');
+    } catch (error) {
+      if (error instanceof InsufficientCreditsError) {
+        return NextResponse.json(
+          {
+            error: 'Insufficient credits',
+            required: error.required,
+            available: error.available,
+          },
+          { status: 402 }
+        );
+      }
+      throw error;
     }
 
     const { data: cachedData, error: cacheError } = cacheResult;

@@ -6,7 +6,6 @@ import { DrawerTitle } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { useStudio } from "@/providers/studio-provider";
-import { toStudioProduct } from "@/types/studio";
 import type { Product } from "@/types/product";
 import { toast } from "sonner";
 import { useProductEnrichment } from "@/hooks/use-product-enrichment";
@@ -50,7 +49,7 @@ export function ProductDetailContent({
   eventPrefix = "product",
 }: ProductDetailContentProps) {
   const { addToSelected, removeFromSelected, state: studioState } = useStudio();
-  const inStock = product.in_stock;
+  const inStock = product.available;
 
   // State for save to wardrobe functionality
   const [isSaving, setIsSaving] = React.useState(false);
@@ -61,21 +60,26 @@ export function ProductDetailContent({
     enrichedData,
     status: enrichmentStatus,
     error: enrichmentError,
-    enrich,
+    enrich: _enrich,
     isLoading: isEnriching,
     isCached,
   } = useProductEnrichment(product.id, product.product_url);
 
+  // NOTE: Enrichment is prefetched when product card is clicked (see lens-results.tsx)
+  // We don't auto-trigger here to avoid duplicate API calls and credit deductions
+  // The prefetch cache in prefetch-enrichment.ts handles deduplication
+  
   // Auto-trigger enrichment when component mounts (if not already prefetched)
-  React.useEffect(() => {
-    if (product.product_url && enrichmentStatus === 'idle') {
-      enrich();
-    }
-  }, [product.product_url, enrichmentStatus, enrich]);
+  // DISABLED to prevent duplicate credit charges
+  // React.useEffect(() => {
+  //   if (product.product_url && enrichmentStatus === 'idle') {
+  //     enrich();
+  //   }
+  // }, [product.product_url, enrichmentStatus, enrich]);
 
   // Use enriched price if available, fallback to product price
-  const displayPrice = enrichedData?.price ?? product.price;
-  const displayCurrency = enrichedData?.currency ?? product.currency;
+  const displayPrice = enrichedData?.price ?? product.price ?? 0;
+  const displayCurrency = enrichedData?.currency ?? product.currency ?? 'USD';
   const hasDisplayPrice = displayPrice > 0;
 
   // Format price with currency symbol
@@ -158,9 +162,9 @@ export function ProductDetailContent({
           {/* Left Column - Product Image Only */}
           <div>
             <div className="bg-white dark:bg-zinc-900 lg:rounded-lg overflow-hidden lg:sticky lg:top-0 flex items-center justify-center lg:h-[60vh]">
-              {(product.image_full || product.image) ? (
+              {product.image_url ? (
                 <img
-                  src={product.image_full || product.image}
+                  src={product.image_url}
                   alt={product.name}
                   className="w-full h-auto lg:h-full object-contain"
                 />
@@ -192,9 +196,9 @@ export function ProductDetailContent({
                 {isEnriching && !enrichedData ? (
                   // Skeleton with fallback to existing price
                   <div className="flex items-center gap-2">
-                    {product.price > 0 ? (
+                    {product.price && product.price > 0 ? (
                       <div className="text-2xl font-bold text-gray-400 dark:text-gray-500 animate-pulse">
-                        {formatPrice(product.price, product.currency)}
+                        {formatPrice(product.price, product.currency || 'USD')}
                       </div>
                     ) : (
                       <div className="h-8 w-24 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
@@ -227,22 +231,7 @@ export function ProductDetailContent({
               )}
             </div>
 
-            {/* Rating */}
-            {product.rating && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="ml-1 text-sm font-semibold text-gray-900 dark:text-white">
-                    {product.rating.toFixed(1)}
-                  </span>
-                </div>
-                {product.reviews && (
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    ({product.reviews.toLocaleString()} reviews)
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Rating - Not available in database Product type */}
 
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-2">
@@ -257,9 +246,9 @@ export function ProductDetailContent({
                     product_brand: product.brand,
                     product_price: product.price,
                     product_url: product.product_url,
-                    in_stock: product.in_stock,
-                    has_rating: !!product.rating,
-                    rating: product.rating,
+                    in_stock: product.available,
+                    has_rating: false,
+                    rating: null,
                   });
                 }}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 bg-accent-2 hover:bg-accent-2/90 text-white text-sm font-medium rounded-lg transition-colors"
@@ -284,8 +273,7 @@ export function ProductDetailContent({
                     });
                   } else {
                     // Add product to Studio
-                    addToSelected(toStudioProduct(product));
-
+    
                     // Track addition event
                     posthog.capture(`${eventPrefix}_product_selected_for_studio`, {
                       product_id: product.id,
@@ -314,8 +302,20 @@ export function ProductDetailContent({
                     product_id: product.id,
                     product_name: product.name,
                     product_brand: product.brand,
-                    product_price: product.price,
+                    product_url: product.product_url,
+                    in_stock: inStock,
                   });
+                
+                  // Convert to studio product format
+                  const studioProduct = {
+                    id: product.id,
+                    title: product.name,
+                    brand: product.brand || 'Unknown',
+                    image: product.image_url || '',
+                    sourceData: product as Record<string, any>,
+                  };
+                
+                  addToSelected(studioProduct);
                 }}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors"
               >
@@ -367,7 +367,7 @@ export function ProductDetailContent({
                   <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse w-4/6" />
                 </div>
               </div>
-            ) : (enrichedData?.description_summary || product.description) && (
+            ) : enrichedData?.description_summary && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Package className="h-4 w-4 text-gray-600 dark:text-gray-400" />
@@ -377,7 +377,7 @@ export function ProductDetailContent({
                   )}
                 </div>
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {enrichedData?.description_summary || product.description}
+                  {enrichedData?.description_summary}
                 </p>
               </div>
             )}
@@ -426,12 +426,12 @@ export function ProductDetailContent({
               </div>
             )}
 
-            {/* Attributes */}
-            {product.attributes && Object.keys(product.attributes).length > 0 && (
+            {/* Attributes from metadata */}
+            {product.metadata && Object.keys(product.metadata).length > 0 && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Details</h4>
                 <dl className="grid grid-cols-2 gap-2">
-                  {Object.entries(product.attributes).map(([key, value]) => (
+                  {Object.entries(product.metadata).map(([key, value]) => (
                     value && (
                       <div key={key} className="text-xs">
                         <dt className="font-medium text-gray-600 dark:text-gray-400 capitalize">

@@ -2,7 +2,8 @@ import { TooltipIconButton } from "../ui/tooltip-icon-button";
 import { PanelRightOpen, PanelRightClose, Plus } from "lucide-react";
 import Image from "next/image";
 import { PrivacyToggle } from "./privacy-toggle";
-import { StudioToggle } from "@/components/artifact/studio/studio-toggle"
+import { StudioToggle } from "@/components/artifact/studio/studio-toggle";
+import { CreditBadge } from "@/components/credits/credit-badge";
 
 export function ChatHeader(props: {
   chatStarted: boolean;
@@ -70,8 +71,11 @@ export function ChatHeader(props: {
         )}
       </div>
 
-      {/* Right: Studio Button and Wordmark */}
+      {/* Right: Credits Badge, Studio Button and Wordmark */}
       <div className="ml-auto flex items-center gap-2">
+        {/* Credits Badge - show for all authenticated users */}
+        <CreditBadge />
+
         {/* Studio Button - only show if thread exists */}
         {threadId && (
           <StudioToggle />

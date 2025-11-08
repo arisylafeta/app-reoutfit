@@ -9,6 +9,7 @@ import { ProductGrid } from '@/components/products/product-grid';
 import { ProductDetailsModal } from '@/components/products/product-details-modal';
 import { ProductFilters } from '@/components/products/product-filters';
 import { useProducts } from '@/hooks/use-products';
+import { useDebounce } from '@/hooks/use-debounce';
 import { Product } from '@/types/product';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 
@@ -17,14 +18,17 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('all');
-  const [gender, setGender] = useState('all');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [genders, setGenders] = useState<string[]>([]);
+
+  // Debounce search to avoid excessive API calls (500ms delay)
+  const debouncedSearch = useDebounce(search, 500);
 
   const { chatHistoryOpen, toggleSidebar, isLargeScreen } = useChatSidebar();
   const { products, loading, error, hasMore, loadMore } = useProducts({
-    category: category === 'all' ? undefined : category,
-    gender: gender === 'all' ? undefined : gender,
-    search: search || undefined,
+    categories: categories.length > 0 ? categories : undefined,
+    genders: genders.length > 0 ? genders : undefined,
+    search: debouncedSearch || undefined,
   });
 
   const handleProductClick = (product: Product) => {
@@ -39,8 +43,8 @@ export default function ProductsPage() {
 
   const handleClearFilters = () => {
     setSearch('');
-    setCategory('all');
-    setGender('all');
+    setCategories([]);
+    setGenders([]);
   };
 
   return (
@@ -93,11 +97,11 @@ export default function ProductsPage() {
         <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <ProductFilters
             search={search}
-            category={category}
-            gender={gender}
+            categories={categories}
+            genders={genders}
             onSearchChange={setSearch}
-            onCategoryChange={setCategory}
-            onGenderChange={setGender}
+            onCategoriesChange={setCategories}
+            onGendersChange={setGenders}
             onClearFilters={handleClearFilters}
           />
         </div>
@@ -123,17 +127,17 @@ export default function ProductsPage() {
                   />
                 </EmptyMedia>
                 <EmptyTitle>
-                  {search || category !== 'all' || gender !== 'all'
+                  {search || categories.length > 0 || genders.length > 0
                     ? 'No products match your filters'
                     : 'No products available'}
                 </EmptyTitle>
                 <EmptyDescription>
-                  {search || category !== 'all' || gender !== 'all'
+                  {search || categories.length > 0 || genders.length > 0
                     ? 'Try adjusting your search or filters to find what you\'re looking for.'
                     : 'Check back later for new fashion items.'}
                 </EmptyDescription>
               </EmptyHeader>
-              {(search || category !== 'all' || gender !== 'all') && (
+              {(search || categories.length > 0 || genders.length > 0) && (
                 <Button onClick={handleClearFilters} size="lg">
                   Clear Filters
                 </Button>

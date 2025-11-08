@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import type { PrettifyResponse } from '@/lib/db/wardrobe-types';
+import { getUserCredits, deductCredits, InsufficientCreditsError } from '@/lib/db/credits';
 
 const genAI = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || '',
@@ -19,6 +20,37 @@ export async function POST(request: NextRequest) {
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Credit check (1 credit for prettify)
+    const COST = 1;
+    try {
+      const balance = await getUserCredits(user.id);
+      if (balance < COST) {
+        return NextResponse.json(
+          {
+            error: 'Insufficient credits',
+            required: COST,
+            available: balance,
+          },
+          { status: 402 }
+        );
+      }
+
+      // Deduct credits BEFORE expensive operation
+      await deductCredits(user.id, COST, 'prettify-wardrobe');
+    } catch (error) {
+      if (error instanceof InsufficientCreditsError) {
+        return NextResponse.json(
+          {
+            error: 'Insufficient credits',
+            required: error.required,
+            available: error.available,
+          },
+          { status: 402 }
+        );
+      }
+      throw error;
     }
 
     // Check if Gemini API key is configured

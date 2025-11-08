@@ -1,15 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useStudio } from "@/providers/studio-provider";
 import { SelectedGrid } from "./selected-grid";
 import { OutfitColumn } from "./outfit-column";
 import { LookDisplay } from "./look-display";
 import { BottomActions } from "./bottom-actions";
+import { StudioProductDrawer } from "./studio-product-drawer";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag } from "lucide-react";
-import { toast } from "sonner";
 import posthog from "posthog-js";
 
 /**
@@ -18,9 +18,10 @@ import posthog from "posthog-js";
  */
 export function StudioLayout() {
   const { state } = useStudio();
+  const [showProductsDrawer, setShowProductsDrawer] = useState(false);
 
   const handleProductsClick = () => {
-    toast.info("Shopping history coming soon");
+    setShowProductsDrawer(true);
     posthog.capture("studio_products_clicked", {
       feature: "studio",
       action: "products_button_clicked",
@@ -97,6 +98,12 @@ export function StudioLayout() {
           </div>
         </div>
       </div>
+
+      {/* Products Drawer */}
+      <StudioProductDrawer
+        open={showProductsDrawer}
+        onOpenChange={setShowProductsDrawer}
+      />
     </div>
   );
 }

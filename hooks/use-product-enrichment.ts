@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type {
   EnrichedProductData,
   EnrichmentStatus,
   UseProductEnrichmentReturn,
 } from '@/types/enriched-product';
+import { getCachedEnrichment, subscribeToCacheUpdates } from '@/lib/prefetch-enrichment';
 
 /**
  * Hook for enriching product data using Firecrawl
@@ -42,6 +43,83 @@ export function useProductEnrichment(
   const [status, setStatus] = useState<EnrichmentStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [isCached, setIsCached] = useState(false);
+  const [isWaitingForPrefetch, setIsWaitingForPrefetch] = useState(false);
+
+  console.log('[HOOK] 🎣 useProductEnrichment render', {
+    productUrl,
+    status,
+    hasEnrichedData: !!enrichedData,
+    isWaitingForPrefetch,
+  });
+
+  // Check for prefetched data on mount and when productUrl changes
+  useEffect(() => {
+    console.log('[HOOK] 🔄 useEffect triggered', {
+      productUrl,
+      status,
+      hasProductUrl: !!productUrl,
+      statusIsIdle: status === 'idle',
+    });
+
+    if (productUrl && status === 'idle') {
+      console.log('[HOOK] 🔍 Checking cache for:', productUrl);
+      const cachedData = getCachedEnrichment(productUrl);
+      
+      if (cachedData) {
+        console.log('[HOOK] ✅ Found cached data!', {
+          data: cachedData,
+          hasData: !!cachedData.data,
+        });
+        setEnrichedData(cachedData.data);
+        setIsCached(cachedData.cached);
+        setStatus('success');
+        setIsWaitingForPrefetch(false);
+      } else {
+        console.log('[HOOK] ❌ No cached data found, waiting for prefetch...');
+        setIsWaitingForPrefetch(true);
+      }
+    } else {
+      console.log('[HOOK] ⏭️ Skipping cache check', {
+        reason: !productUrl ? 'no productUrl' : 'status not idle',
+      });
+    }
+  }, [productUrl, status]);
+
+  // Subscribe to cache updates to get notified when prefetch completes
+  useEffect(() => {
+    if (!productUrl) return;
+
+    console.log('[HOOK] 🔔 Subscribing to cache updates for:', productUrl);
+
+    const unsubscribe = subscribeToCacheUpdates((updatedUrl) => {
+      console.log('[HOOK] 📬 Cache update notification received', {
+        updatedUrl,
+        currentUrl: productUrl,
+        matches: updatedUrl === productUrl,
+      });
+
+      // Only update if this is for our product and we don't have data yet
+      if (updatedUrl === productUrl && !enrichedData) {
+        console.log('[HOOK] 🔄 Fetching newly cached data...');
+        const cachedData = getCachedEnrichment(productUrl);
+        
+        if (cachedData) {
+          console.log('[HOOK] ✅ Got data from cache after notification!', {
+            data: cachedData,
+          });
+          setEnrichedData(cachedData.data);
+          setIsCached(cachedData.cached);
+          setStatus('success');
+          setIsWaitingForPrefetch(false);
+        }
+      }
+    });
+
+    return () => {
+      console.log('[HOOK] 🔕 Unsubscribing from cache updates');
+      unsubscribe();
+    };
+  }, [productUrl, enrichedData]);
 
   const enrich = useCallback(async () => {
     if (!productUrl) {
@@ -103,7 +181,7 @@ export function useProductEnrichment(
     status,
     error,
     enrich,
-    isLoading: status === 'loading',
+    isLoading: status === 'loading' || isWaitingForPrefetch,
     isCached,
   };
 }

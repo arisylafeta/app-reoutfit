@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const { product } = body;
 
     // 3. Validate input
-    if (!product || !product.image || !product.name) {
+    if (!product || !product.image_url || !product.name) {
       return NextResponse.json(
         { error: 'Invalid request', message: 'Product with image and name is required' },
         { status: 400 }
@@ -44,8 +44,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Extract category and role
-    const productCategory = product.attributes?.category || 'other';
-    const productRole = product.attributes?.role || getProductRole(product.attributes as any) || 'accessory';
+    const productMetadata = product.metadata as any;
+    const productCategory = productMetadata?.category || 'other';
+    const productRole = productMetadata?.role || getProductRole(productMetadata) || 'accessory';
 
     // 5. Check for duplicates by product URL
     let existingItem = null;
@@ -74,11 +75,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Download external image and upload to storage
-    let uploadedImageUrl = product.image;
+    let uploadedImageUrl = product.image_url;
 
     try {
       // Fetch the external image
-      const imageResponse = await fetch(product.image);
+      const imageResponse = await fetch(product.image_url);
       if (!imageResponse.ok) {
         throw new Error(`Failed to fetch image: ${imageResponse.status}`);
       }
@@ -131,14 +132,10 @@ export async function POST(request: NextRequest) {
       product_url: product.product_url,
       price: product.price,
       currency: product.currency,
-      description: product.description,
-      rating: product.rating,
-      reviews: product.reviews,
-      in_stock: product.in_stock,
-      source_icon: product.source_icon,
+      available: product.available,
       category: productCategory,
       role: productRole,
-      ...product.attributes,
+      ...productMetadata,
     };
 
     const { data: wardrobeItem, error: wardrobeError } = await supabase

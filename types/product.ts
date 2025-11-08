@@ -98,3 +98,31 @@ export interface ProductsError {
   error: string;
   code?: string;
 }
+
+/**
+ * Product with search scoring information
+ */
+export interface ScoredProduct extends Product {
+  semanticScore?: number;
+  textScore?: number;
+  hybridScore?: number;
+}
+
+/**
+ * Search API response
+ */
+export interface SearchResponse {
+  products: ScoredProduct[];
+  total: number;
+  hasMore: boolean;
+  offset: number;
+  limit: number;
+  searchType: 'filter-only' | 'hybrid' | 'text-fallback';
+  breakdown?: {
+    semanticCount: number;
+    textCount: number;
+    mergedCount: number;
+    threshold: number;
+  };
+  warning?: string;
+}

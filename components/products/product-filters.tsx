@@ -3,34 +3,53 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Search, X } from 'lucide-react';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Search, Filter, Loader2 } from 'lucide-react';
+import { useProductFilters } from '@/hooks/use-product-filters';
 
 interface ProductFiltersProps {
   search: string;
-  category: string;
-  gender: string;
+  categories: string[];
+  genders: string[];
   onSearchChange: (search: string) => void;
-  onCategoryChange: (category: string) => void;
-  onGenderChange: (gender: string) => void;
+  onCategoriesChange: (categories: string[]) => void;
+  onGendersChange: (genders: string[]) => void;
   onClearFilters: () => void;
 }
 
 export function ProductFilters({
   search,
-  category,
-  gender,
+  categories,
+  genders,
   onSearchChange,
-  onCategoryChange,
-  onGenderChange,
+  onCategoriesChange,
+  onGendersChange,
   onClearFilters,
 }: ProductFiltersProps) {
-  const hasActiveFilters = search !== '' || category !== 'all' || gender !== 'all';
+  const { filters, loading: filtersLoading } = useProductFilters();
+  const hasActiveFilters = search !== '' || categories.length > 0 || genders.length > 0;
+
+  const toggleCategory = (category: string) => {
+    onCategoriesChange(
+      categories.includes(category)
+        ? categories.filter((c) => c !== category)
+        : [...categories, category]
+    );
+  };
+
+  const toggleGender = (gender: string) => {
+    onGendersChange(
+      genders.includes(gender)
+        ? genders.filter((g) => g !== gender)
+        : [...genders, gender]
+    );
+  };
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -39,7 +58,7 @@ export function ProductFilters({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
           type="text"
-          placeholder="Search products..."
+          placeholder="Search by name or brand..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10"
@@ -51,32 +70,73 @@ export function ProductFilters({
 
       {/* Category, Gender and Clear - Right side */}
       <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-        <Select value={category} onValueChange={onCategoryChange}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="Tops">Tops</SelectItem>
-            <SelectItem value="Bottoms">Bottoms</SelectItem>
-            <SelectItem value="Dresses">Dresses</SelectItem>
-            <SelectItem value="Footwear">Footwear</SelectItem>
-            <SelectItem value="Accessories">Accessories</SelectItem>
-            <SelectItem value="Outerwear">Outerwear</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Category Filter */}
+        {(filters.categories?.length ?? 0) > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="default" className="gap-2">
+                {filtersLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Filter className="h-4 w-4" />
+                )}
+                Category
+                {categories.length > 0 && (
+                  <span className="ml-1 rounded-full bg-accent-2 px-1.5 text-xs text-white">
+                    {categories.length}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {filters.categories.map((category) => (
+                <DropdownMenuCheckboxItem
+                  key={category}
+                  checked={categories.includes(category)}
+                  onCheckedChange={() => toggleCategory(category)}
+                >
+                  {category}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
-        <Select value={gender} onValueChange={onGenderChange}>
-          <SelectTrigger className="w-full sm:w-[140px]">
-            <SelectValue placeholder="Gender" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="male">Men</SelectItem>
-            <SelectItem value="female">Women</SelectItem>
-            <SelectItem value="unisex">Unisex</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Gender Filter */}
+        {(filters.genders?.length ?? 0) > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="default" className="gap-2">
+                {filtersLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Filter className="h-4 w-4" />
+                )}
+                Gender
+                {genders.length > 0 && (
+                  <span className="ml-1 rounded-full bg-accent-2 px-1.5 text-xs text-white">
+                    {genders.length}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Filter by gender</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {filters.genders.map((gender) => (
+                <DropdownMenuCheckboxItem
+                  key={gender}
+                  checked={genders.includes(gender)}
+                  onCheckedChange={() => toggleGender(gender)}
+                >
+                  {gender}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Clear filters */}
         {hasActiveFilters && (
@@ -86,8 +146,7 @@ export function ProductFilters({
             onClick={onClearFilters}
             className="flex items-center gap-2 shrink-0"
           >
-            <X className="h-4 w-4" />
-            Clear
+            Clear filters
           </Button>
         )}
       </div>

@@ -5,6 +5,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { uploadImagesToGemini, type UploadedFile } from '@/lib/gemini-files';
+import { getUserCredits, deductCredits, InsufficientCreditsError } from '@/lib/db/credits';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GENERATION_TIMEOUT_MS = 30000; // 30 seconds
@@ -103,6 +104,37 @@ export async function POST(request: NextRequest) {
         { error: 'Unauthorized', message: 'Authentication required' },
         { status: 401 }
       );
+    }
+
+    // Credit check (3 credits for look generation)
+    const COST = 3;
+    try {
+      const balance = await getUserCredits(user.id);
+      if (balance < COST) {
+        return NextResponse.json(
+          {
+            error: 'Insufficient credits',
+            required: COST,
+            available: balance,
+          },
+          { status: 402 }
+        );
+      }
+
+      // Deduct credits BEFORE expensive operation
+      await deductCredits(user.id, COST, 'generate-look');
+    } catch (error) {
+      if (error instanceof InsufficientCreditsError) {
+        return NextResponse.json(
+          {
+            error: 'Insufficient credits',
+            required: error.required,
+            available: error.available,
+          },
+          { status: 402 }
+        );
+      }
+      throw error;
     }
 
     // 2. Parse JSON body

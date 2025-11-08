@@ -68,6 +68,75 @@ To use these variables:
 
 When these environment variables are set, the application will use them instead of showing the setup form.
 
+## 🔍 Semantic Product Search
+
+This application includes **hybrid semantic search** for products powered by FashionCLIP embeddings. The system combines visual similarity search with traditional text matching for superior product discovery.
+
+### Architecture
+
+**Filter-First Hybrid Search:**
+1. Apply user filters (category, brand, gender, price) to reduce search space
+2. Generate query embedding via FashionCLIP (512-dim vector)
+3. Perform semantic search on filtered products (pgvector + HNSW index)
+4. Perform text search on filtered products (ILIKE matching)
+5. Merge results with weighted scoring (60% semantic, 40% text)
+
+### API Endpoints
+
+**Search Endpoint:** `/api/products/search`
+
+```typescript
+// Example: Semantic search with filters
+const response = await fetch('/api/products/search?query=black+leather+jacket&categories=Jackets&genders=Men&limit=20');
+
+// Response includes semantic scores and search type
+const data = await response.json();
+// {
+//   products: [...],         // Products with hybridScore, semanticScore, textScore
+//   searchType: "hybrid",    // hybrid | filter-only | text-fallback
+//   breakdown: { semanticCount, textCount, mergedCount, threshold }
+// }
+```
+
+### Frontend Integration
+
+**useProducts Hook:**
+```typescript
+import { useProducts } from '@/hooks/use-products';
+
+const { products, searchType, breakdown } = useProducts({
+  search: 'black leather jacket',
+  categories: ['Jackets'],
+  genders: ['Men']
+});
+
+// products are ScoredProduct[] with hybridScore, semanticScore, textScore
+// searchType indicates: 'hybrid' | 'filter-only' | 'text-fallback'
+```
+
+### Database Schema
+
+**Key Functions:**
+- `search_products_by_embedding()` - Vector similarity search on filtered product set
+- `get_filtered_product_group_ids()` - Extract product IDs matching filters
+
+**Migration:** `/supabase/migrations/20251108_add_semantic_search.sql`
+
+### Configuration
+
+The search endpoint requires the agent backend for embedding generation:
+
+```bash
+# .env
+NEXT_PUBLIC_API_URL=http://localhost:8000  # Agent backend URL
+```
+
+**Fallback Behavior:**
+- If embedding service is unavailable, automatically falls back to text-only search
+- Frontend receives `searchType: "text-fallback"` to indicate degraded mode
+
+For complete implementation details, see [semantic-search-implementation.md](docs/semantic-search-implementation.md).
+
 ## Hiding Messages in the Chat
 
 You can control the visibility of messages within the Agent Chat UI in two main ways:

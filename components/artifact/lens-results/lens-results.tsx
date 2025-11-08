@@ -138,7 +138,7 @@ export function LensResults(props: LensResultsProps) {
     }
     
     if (inStockOnly) {
-      filtered = filtered.filter(p => p.in_stock === true);
+      filtered = filtered.filter(p => p.available === true);
     }
 
     // Sort products
@@ -150,7 +150,8 @@ export function LensResults(props: LensResultsProps) {
         filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case "rating":
-        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        // Rating not available in database Product type, sort by price instead
+        filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case "relevance":
       default:
@@ -162,7 +163,8 @@ export function LensResults(props: LensResultsProps) {
           if (scoreA !== undefined && scoreB !== undefined) {
             return scoreB - scoreA; // Higher score first
           }
-          return (a.position || 999) - (b.position || 999);
+          // Position not available, maintain current order
+          return 0;
         });
         break;
     }
@@ -180,7 +182,7 @@ export function LensResults(props: LensResultsProps) {
     }
     
     if (inStockOnly) {
-      filtered = filtered.filter(p => p.in_stock === true);
+      filtered = filtered.filter(p => p.available === true);
     }
 
     // Sort products
@@ -192,7 +194,8 @@ export function LensResults(props: LensResultsProps) {
         filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case "rating":
-        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        // Rating not available in database Product type, sort by price instead
+        filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case "relevance":
       default:
@@ -204,7 +207,8 @@ export function LensResults(props: LensResultsProps) {
           if (scoreA !== undefined && scoreB !== undefined) {
             return scoreB - scoreA; // Higher score first
           }
-          return (a.position || 999) - (b.position || 999);
+          // Position not available, maintain current order
+          return 0;
         });
         break;
     }
@@ -266,9 +270,9 @@ export function LensResults(props: LensResultsProps) {
                 key={idx}
                 className="flex-1 aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200 min-w-0"
               >
-                {product.image ? (
+                {product.image_url ? (
                   <img
-                    src={product.image}
+                    src={product.image_url}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
@@ -540,11 +544,20 @@ export function LensResults(props: LensResultsProps) {
                           key={product.id || `retail-${idx}`} 
                           product={product}
                           onClick={() => {
+                            console.log('[LENS] 🖱️ Product card clicked', {
+                              productId: product.id,
+                              productUrl: product.product_url,
+                              productName: product.name,
+                            });
+                            
                             // Prefetch enrichment data immediately
+                            console.log('[LENS] 📞 Calling prefetchProductEnrichment...');
                             prefetchProductEnrichment(product.id, product.product_url);
                             
+                            console.log('[LENS] 🚪 Opening drawer...');
                             setSelectedProduct(product);
                             setIsDrawerOpen(true);
+                            
                             posthog.capture('product_card_clicked', {
                               product_id: product.id,
                               product_name: product.name,
@@ -552,7 +565,7 @@ export function LensResults(props: LensResultsProps) {
                               product_price: product.price,
                               product_position: idx + 1,
                               product_category: 'retail',
-                              in_stock: product.in_stock,
+                              in_stock: product.available,
                             });
                           }}
                         />
@@ -593,7 +606,7 @@ export function LensResults(props: LensResultsProps) {
                               product_price: product.price,
                               product_position: idx + 1,
                               product_category: 'resale',
-                              in_stock: product.in_stock,
+                              in_stock: product.available,
                             });
                           }}
                         />
@@ -668,8 +681,8 @@ export function LensResults(props: LensResultsProps) {
 }
 
 function ProductCard({ product, onClick }: { product: Product; onClick?: () => void }) {
-  const hasPrice = product.price > 0;
-  const inStock = product.in_stock;
+  const hasPrice = product.price !== null && product.price > 0;
+  const inStock = product.available;
 
   // Format price with currency symbol
   const formatPrice = (price: number, currency: string) => {
@@ -685,9 +698,9 @@ function ProductCard({ product, onClick }: { product: Product; onClick?: () => v
     >
       {/* Product Image */}
       <div className="aspect-square bg-gray-100 relative overflow-hidden">
-        {product.image ? (
+        {product.image_url ? (
           <img
-            src={product.image}
+            src={product.image_url}
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           />
@@ -727,14 +740,10 @@ function ProductCard({ product, onClick }: { product: Product; onClick?: () => v
         </h4>
 
         {/* Price */}
-        {hasPrice ? (
-          <div className="flex items-baseline gap-1">
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">
-              {formatPrice(product.price, product.currency)}
-            </span>
+        {hasPrice && product.price && (
+          <div className="text-lg font-bold text-gray-900">
+            {formatPrice(product.price, product.currency || 'USD')}
           </div>
-        ) : (
-          <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Click for Price</p>
         )}
       </div>
     </button>

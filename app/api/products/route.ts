@@ -6,11 +6,17 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
   const offset = parseInt(searchParams.get('offset') || '0');
   const available = searchParams.get('available') !== 'false';
-  
-  // Filter parameters
-  const category = searchParams.get('category');
-  const brand = searchParams.get('brand');
-  const gender = searchParams.get('gender');
+
+  // Filter parameters - support both single values and comma-separated arrays
+  const categoriesParam = searchParams.get('categories') || searchParams.get('category');
+  const categories = categoriesParam ? categoriesParam.split(',').filter(Boolean) : null;
+
+  const brandsParam = searchParams.get('brands') || searchParams.get('brand');
+  const brands = brandsParam ? brandsParam.split(',').filter(Boolean) : null;
+
+  const gendersParam = searchParams.get('genders') || searchParams.get('gender');
+  const genders = gendersParam ? gendersParam.split(',').filter(Boolean) : null;
+
   const search = searchParams.get('search');
   const minPrice = searchParams.get('minPrice');
   const maxPrice = searchParams.get('maxPrice');
@@ -36,9 +42,9 @@ export async function GET(request: NextRequest) {
     // Use RPC function to get distinct products at database level
     const { data: products, error } = await supabase.rpc('get_distinct_products', {
       p_available: available,
-      p_category: category && category !== 'all' ? category : null,
-      p_brand: brand || null,
-      p_gender: gender && gender !== 'all' ? gender : null,
+      p_categories: categories?.length ? categories : null,
+      p_brands: brands?.length ? brands : null,
+      p_genders: genders?.length ? genders : null,
       p_search: search || null,
       p_min_price: minPrice ? parseFloat(minPrice) : null,
       p_max_price: maxPrice ? parseFloat(maxPrice) : null,

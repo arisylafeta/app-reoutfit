@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Heart, Loader2, Save } from 'lucide-react';
+import { ExternalLink, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import posthog from 'posthog-js';
 import { cn } from '@/lib/utils';

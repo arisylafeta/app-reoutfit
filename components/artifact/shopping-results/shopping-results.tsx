@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useStreamContext as useReactUIStreamContext } from "@langchain/langgraph-sdk/react-ui";
-import { ShoppingBag, AlertCircle, SlidersHorizontal, Star, Package } from "lucide-react";
+import { ShoppingBag, AlertCircle, SlidersHorizontal, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { ArtifactDrawer } from "@/components/artifact/shared/artifact-drawer";
@@ -109,7 +109,7 @@ export function ShoppingResults(props: ShoppingResultsProps) {
     }
     
     if (inStockOnly) {
-      filtered = filtered.filter(p => p.in_stock === true);
+      filtered = filtered.filter(p => p.available === true);
     }
 
     switch (sortBy) {
@@ -120,11 +120,12 @@ export function ShoppingResults(props: ShoppingResultsProps) {
         filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case "rating":
-        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        // Rating not available in database Product type, sort by price instead
+        filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case "relevance":
       default:
-        filtered.sort((a, b) => (a.position || 999) - (b.position || 999));
+        // Position not available, maintain current order
         break;
     }
 
@@ -191,14 +192,14 @@ export function ShoppingResults(props: ShoppingResultsProps) {
                 key={idx}
                 className="aspect-square rounded-md overflow-hidden bg-white border border-gray-200 min-w-0 relative group/preview"
               >
-                {product.image ? (
+                {product.image_url ? (
                   <>
                     <img
-                      src={product.image}
+                      src={product.image_url}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
-                    {product.price > 0 && (
+                    {product.price && product.price > 0 && (
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1.5 opacity-0 group-hover/preview:opacity-100 transition-opacity">
                         <p className="text-[10px] font-semibold text-white truncate">
                           ${product.price}
@@ -437,7 +438,7 @@ export function ShoppingResults(props: ShoppingResultsProps) {
 }
 
 function ProductCard({ product, onClick }: { product: Product; onClick?: () => void }) {
-  const hasPrice = product.price > 0;
+  const hasPrice = product.price !== null && product.price > 0;
 
   const formatPrice = (price: number, currency: string) => {
     const currencySymbol = currency.replace(/[^$£€¥]/g, '') || '$';
@@ -450,9 +451,9 @@ function ProductCard({ product, onClick }: { product: Product; onClick?: () => v
       className="group block rounded-lg border border-gray-200 bg-white hover:shadow-md hover:border-accent-2/50 transition-all overflow-hidden min-w-[180px] dark:bg-zinc-800 dark:border-zinc-700 text-left w-full"
     >
       <div className="aspect-square bg-gray-100 relative overflow-hidden">
-        {product.image ? (
+        {product.image_url ? (
           <img
-            src={product.image}
+            src={product.image_url}
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           />
@@ -462,7 +463,7 @@ function ProductCard({ product, onClick }: { product: Product; onClick?: () => v
           </div>
         )}
         
-        {product.in_stock === true && (
+        {product.available === true && (
           <div className="absolute top-2 right-2">
             <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
               In Stock
@@ -483,22 +484,14 @@ function ProductCard({ product, onClick }: { product: Product; onClick?: () => v
         {hasPrice ? (
           <div className="flex items-baseline gap-1">
             <span className="text-lg font-semibold text-gray-900 dark:text-white">
-              {formatPrice(product.price, product.currency)}
+              {formatPrice(product.price!, product.currency || 'USD')}
             </span>
           </div>
         ) : (
           <p className="text-sm text-gray-500 dark:text-gray-400">Price not available</p>
         )}
 
-        {product.rating && (
-          <div className="flex items-center gap-1 mt-2">
-            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-            <span className="text-xs text-gray-600 dark:text-gray-400">
-              {product.rating.toFixed(1)}
-              {product.reviews && ` (${product.reviews})`}
-            </span>
-          </div>
-        )}
+        {/* Rating not available in database Product type */}
       </div>
     </button>
   );

@@ -131,9 +131,9 @@ export function NavUser({ isLargeScreen }: NavUserProps) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="gap-2">
-                <Link href="/subscribe" className="flex items-center">
+                <Link href="/credits" className="flex items-center">
                   <CreditCard className="size-4 text-muted-foreground mr-2" strokeWidth={1.5} />
-                  My plan
+                  Billing
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="gap-2">
