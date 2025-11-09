@@ -109,7 +109,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
               <span className="px-4 text-sm text-muted-foreground bg-background absolute">Or continue with</span>
             </div>
 
-              <ProviderSigninBlock/>
+              <ProviderSigninBlock redirectTo={redirectTo} query={query} />
 
               <p className="animate-element animate-delay-900 text-center text-sm text-muted-foreground">
                 {mode === 'signup' ? (

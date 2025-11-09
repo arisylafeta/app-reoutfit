@@ -45,12 +45,25 @@ export async function signup(formData: FormData) {
   redirect('/')
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(formData: FormData) {
   const supabase = await createClient()
+  
+  // Get redirect parameters
+  const redirectTo = formData.get('redirect') as string
+  const query = formData.get('q') as string
+  
+  // Build the callback URL with redirect parameters
+  let callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+  if (redirectTo && query) {
+    callbackUrl += `?next=${encodeURIComponent(`${redirectTo}?q=${encodeURIComponent(query)}`)}`
+  } else if (redirectTo) {
+    callbackUrl += `?next=${encodeURIComponent(redirectTo)}`
+  }
+  
   const { data } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+          redirectTo: callbackUrl,
       },
   })
 
@@ -117,7 +130,24 @@ export async function signupUser(currentState: { message: string; success?: bool
       password: formData.get('password') as string,
   }
 
-  const { error } = await supabase.auth.signUp(data)
+  // Get redirect parameters
+  const redirectTo = formData.get('redirect') as string
+  const query = formData.get('q') as string
+  
+  // Build the redirect URL for email confirmation
+  let emailRedirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+  if (redirectTo && query) {
+    emailRedirectTo += `?next=${encodeURIComponent(`${redirectTo}?q=${encodeURIComponent(query)}`)}`
+  } else if (redirectTo) {
+    emailRedirectTo += `?next=${encodeURIComponent(redirectTo)}`
+  }
+
+  const { error } = await supabase.auth.signUp({
+    ...data,
+    options: {
+      emailRedirectTo,
+    }
+  })
 
   if (error) {
       return { message: error.message, success: false }
