@@ -17,7 +17,13 @@ export interface Product {
   
   // Media
   product_url: string;
-  image_url: string | null;
+  image: string | null;
+  image_url?: string; // Alias for image (used by agent search results)
+  
+  // Reviews & Ratings (from search results)
+  rating?: number;
+  reviews?: number;
+  source_icon?: string;
   
   // Attributes (arrays)
   colors: string[] | null;
@@ -29,6 +35,7 @@ export interface Product {
   // Classification
   gender: string | null;
   size: string | null;
+  role?: string; // Product role/type from AI categorization
   
   // Metadata
   metadata: Record<string, any> | null;
@@ -45,6 +52,10 @@ export interface Product {
   // Variant information (added by API)
   available_sizes?: string[]; // NEW: All available sizes for this product
   variant_count?: number; // NEW: Total number of size variants
+  
+  // SerpAPI Immersive Product Integration
+  immersive_product_token?: string; // Token for immersive API call
+  immersive_data?: ImmersiveProductData; // Cached immersive data
 }
 
 export interface AffiliatePartner {
@@ -125,4 +136,150 @@ export interface SearchResponse {
     threshold: number;
   };
   warning?: string;
+}
+
+/**
+ * SerpAPI Immersive Product Data Types
+ */
+
+export interface ImmersiveProductData {
+  // Product Details
+  title: string;
+  brand?: string;
+  description?: string;
+  rating?: number;
+  reviews?: number;
+  price_range?: string;
+  
+  // Store Information
+  stores: ProductStore[];
+  stores_next_page_token?: string;
+  
+  // Reviews
+  user_reviews?: UserReview[];
+  critic_ratings?: CriticRating[];
+  ratings?: RatingDistribution[];
+  
+  // Media
+  thumbnails?: string[];
+  videos?: ProductVideo[];
+  reviews_images?: string[];
+  
+  // Additional Info
+  about_the_product?: AboutProduct;
+  top_insights?: TopInsight[];
+  variants?: ProductVariantInfo[];
+  discussions_and_forums?: DiscussionForum[];
+  related_searches?: RelatedSearch[];
+}
+
+export interface ProductStore {
+  name: string;
+  logo: string;
+  link: string; // Direct retailer link
+  title: string;
+  rating?: number;
+  reviews?: number;
+  price: string;
+  extracted_price: number;
+  original_price?: string;
+  extracted_original_price?: number;
+  discount?: string;
+  shipping?: string;
+  shipping_extracted?: number;
+  estimated_tax?: string;
+  extracted_estimated_tax?: number;
+  total?: string;
+  extracted_total?: number;
+  payment_methods?: string;
+  details_and_offers?: string[];
+}
+
+export interface UserReview {
+  title: string;
+  text: string;
+  user_name: string;
+  source: string;
+  rating: number;
+  date: string;
+  icon?: string;
+  images?: string[];
+}
+
+export interface CriticRating {
+  link: string;
+  name: string;
+  rating: string;
+}
+
+export interface RatingDistribution {
+  stars: number;
+  amount: number;
+}
+
+export interface ProductVideo {
+  title: string;
+  link: string;
+  source: string;
+  channel?: string;
+  duration?: string;
+  thumbnail: string;
+  preview?: string;
+}
+
+export interface AboutProduct {
+  title: string;
+  link: string;
+  displayed_link?: string;
+  icon?: string;
+  description: string;
+  features?: Array<{ title: string; value: string }>;
+}
+
+export interface TopInsight {
+  title: string;
+  subtitle?: string;
+  items: InsightItem[];
+}
+
+export interface InsightItem {
+  snippet?: string;
+  key_point?: string;
+  pros?: string[];
+  cons?: string[];
+  icon?: string;
+  link?: string;
+  source?: string;
+  title?: string;
+  date?: string;
+  timestamp?: string;
+  thumbnail?: string;
+  user?: string;
+}
+
+export interface ProductVariantInfo {
+  title: string;
+  items: Array<{
+    name: string;
+    selected?: boolean;
+    available?: boolean;
+    serpapi_link?: string;
+  }>;
+}
+
+export interface DiscussionForum {
+  title: string;
+  link: string;
+  source: string;
+  icon?: string;
+  date?: string;
+  items?: Array<{
+    snippet: string;
+    link: string;
+  }>;
+}
+
+export interface RelatedSearch {
+  query: string;
+  link: string;
 }

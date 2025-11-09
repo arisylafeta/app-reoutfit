@@ -241,7 +241,7 @@ export function ShoppingResults(props: ShoppingResultsProps) {
                       setSortBy(newSort);
                       posthog.capture('shopping_sort_changed', {
                         sort_by: newSort,
-                        product_count: filteredProducts.length,
+                        product_count: products.length,
                       });
                     }}
                     className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white dark:bg-zinc-800 dark:border-zinc-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-2"
@@ -259,7 +259,7 @@ export function ShoppingResults(props: ShoppingResultsProps) {
                     setShowFilters(newShowFilters);
                     if (newShowFilters) {
                       posthog.capture('shopping_filters_opened', {
-                        product_count: filteredProducts.length,
+                        product_count: products.length,
                       });
                     }
                   }}
@@ -323,12 +323,12 @@ export function ShoppingResults(props: ShoppingResultsProps) {
                             } else {
                               newSet.add(brand);
                             }
-                            setSelectedBrands(newSet);
                             posthog.capture('shopping_brand_filter_toggled', {
                               brand: brand,
                               action: isAdding ? 'added' : 'removed',
                               total_brands_selected: newSet.size,
                             });
+                            setSelectedBrands(newSet);
                           }}
                           className={cn(
                             "px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors border",

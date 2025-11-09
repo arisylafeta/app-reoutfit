@@ -265,14 +265,14 @@ export function LensResults(props: LensResultsProps) {
 
         {!isOpen && hasProducts && (
           <div className="mt-4 flex gap-2">
-            {retailProducts.slice(0, Math.min(retailProducts.length, 5)).map((product: Product, idx: number) => (
+            {[...retailProducts, ...resaleProducts].slice(0, 5).map((product: Product, idx: number) => (
               <div
                 key={idx}
                 className="flex-1 aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200 min-w-0"
               >
-                {product.image_url ? (
+                {product.image ? (
                   <img
-                    src={product.image_url}
+                    src={product.image}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
@@ -698,9 +698,9 @@ function ProductCard({ product, onClick }: { product: Product; onClick?: () => v
     >
       {/* Product Image */}
       <div className="aspect-square bg-gray-100 relative overflow-hidden">
-        {product.image_url ? (
+        {product.image ? (
           <img
-            src={product.image_url}
+            src={product.image}
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           />

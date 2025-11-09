@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { Star, ShoppingCart, Heart, Search, Save, Package, MessageSquare, Ruler, Loader2 } from "lucide-react";
+import { Star, ShoppingCart, Heart, Search, Save, Package, MessageSquare, Loader2 } from "lucide-react";
 import { DrawerTitle } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import posthog from "posthog-js";
 import { useStudio } from "@/providers/studio-provider";
 import type { Product } from "@/types/product";
 import { toast } from "sonner";
-import { useProductEnrichment } from "@/hooks/use-product-enrichment";
+import { useImmersiveProduct } from "@/hooks/use-immersive-product";
 
 type ProductDetailContentProps = {
   product: Product;
@@ -48,39 +48,31 @@ export function ProductDetailContent({
   showReviews = false,
   eventPrefix = "product",
 }: ProductDetailContentProps) {
-  const { addToSelected, removeFromSelected, state: studioState } = useStudio();
+  const { removeFromSelected, state: studioState } = useStudio();
   const inStock = product.available;
 
   // State for save to wardrobe functionality
   const [isSaving, setIsSaving] = React.useState(false);
   const [isSaved, setIsSaved] = React.useState(false);
 
-  // Firecrawl enrichment hook - triggered by prefetch on click
+  // SerpAPI Immersive Product hook - fetches detailed product info
   const {
-    enrichedData,
-    status: enrichmentStatus,
-    error: enrichmentError,
-    enrich: _enrich,
-    isLoading: isEnriching,
-    isCached,
-  } = useProductEnrichment(product.id, product.product_url);
+    data: immersiveData,
+    isLoading: isLoadingImmersive,
+    error: immersiveError,
+  } = useImmersiveProduct(
+    product.id,
+    product.metadata?.immersive_product_token as string | undefined
+  );
 
-  // NOTE: Enrichment is prefetched when product card is clicked (see lens-results.tsx)
-  // We don't auto-trigger here to avoid duplicate API calls and credit deductions
-  // The prefetch cache in prefetch-enrichment.ts handles deduplication
-  
-  // Auto-trigger enrichment when component mounts (if not already prefetched)
-  // DISABLED to prevent duplicate credit charges
-  // React.useEffect(() => {
-  //   if (product.product_url && enrichmentStatus === 'idle') {
-  //     enrich();
-  //   }
-  // }, [product.product_url, enrichmentStatus, enrich]);
-
-  // Use enriched price if available, fallback to product price
-  const displayPrice = enrichedData?.price ?? product.price ?? 0;
-  const displayCurrency = enrichedData?.currency ?? product.currency ?? 'USD';
+  // Use immersive price range or product price
+  const displayPrice = product.price ?? 0;
+  const displayCurrency = product.currency ?? 'USD';
   const hasDisplayPrice = displayPrice > 0;
+  
+  // Get first store for "Buy Product" button
+  const primaryStore = immersiveData?.stores?.[0];
+  const buyLink = primaryStore?.link || product.product_url;
 
   // Format price with currency symbol
   const formatPrice = (price: number, currency: string) => {
@@ -151,9 +143,83 @@ export function ProductDetailContent({
     }
   };
 
+  // Loading skeleton
+  if (isLoadingImmersive && !immersiveData) {
+    return (
+      <>
+        <DrawerTitle className="sr-only">{product.name}</DrawerTitle>
+        <div className="px-4 pb-4 pt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column - Image Skeleton */}
+            <div>
+              <div className="bg-gray-200 dark:bg-zinc-800 lg:rounded-lg overflow-hidden lg:h-[60vh] animate-pulse flex items-center justify-center">
+                {product.image_url ? (
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    className="w-full h-auto lg:h-full object-contain opacity-50"
+                  />
+                ) : (
+                  <Package className="h-24 w-24 text-gray-400" />
+                )}
+              </div>
+            </div>
+
+            {/* Right Column - Content Skeleton */}
+            <div className="space-y-4">
+              {/* Title */}
+              <div>
+                <h3 className="text-sm lg:text-lg font-semibold text-gray-900 dark:text-white line-clamp-2">
+                  {product.name}
+                </h3>
+                {product.brand && (
+                  <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {product.brand}
+                  </p>
+                )}
+              </div>
+
+              {/* Price Skeleton */}
+              <div className="h-8 w-32 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
+
+              {/* Buttons Skeleton */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="h-10 bg-gray-200 dark:bg-zinc-700 rounded-lg animate-pulse" />
+                <div className="h-10 bg-gray-200 dark:bg-zinc-700 rounded-lg animate-pulse" />
+                <div className="h-10 bg-gray-200 dark:bg-zinc-700 rounded-lg animate-pulse" />
+                <div className="h-10 bg-gray-200 dark:bg-zinc-700 rounded-lg animate-pulse" />
+              </div>
+
+              {/* Loading indicator */}
+              <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-500 dark:text-gray-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading detailed product information...
+              </div>
+
+              {/* Stores Skeleton */}
+              <div className="space-y-2">
+                <div className="h-4 w-32 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
+                <div className="h-20 bg-gray-200 dark:bg-zinc-700 rounded-lg animate-pulse" />
+                <div className="h-20 bg-gray-200 dark:bg-zinc-700 rounded-lg animate-pulse" />
+                <div className="h-20 bg-gray-200 dark:bg-zinc-700 rounded-lg animate-pulse" />
+              </div>
+
+              {/* Description Skeleton */}
+              <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                <div className="h-4 w-40 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
+                <div className="h-3 w-full bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
+                <div className="h-3 w-full bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
+                <div className="h-3 w-3/4 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      {/* Visually Hidden Title for Accessibility */}
       <DrawerTitle className="sr-only">{product.name}</DrawerTitle>
 
       <div className="px-4 pb-4 pt-4">
@@ -193,7 +259,7 @@ export function ProductDetailContent({
             {/* Price and Stock */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {isEnriching && !enrichedData ? (
+                {isLoadingImmersive && !immersiveData ? (
                   // Skeleton with fallback to existing price
                   <div className="flex items-center gap-2">
                     {product.price && product.price > 0 ? (
@@ -209,9 +275,9 @@ export function ProductDetailContent({
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
                       {formatPrice(displayPrice, displayCurrency)}
                     </div>
-                    {enrichedData?.price && enrichedData.price !== product.price && (
-                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                        Updated
+                    {immersiveData?.price_range && (
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        {immersiveData.price_range}
                       </span>
                     )}
                   </div>
@@ -236,7 +302,7 @@ export function ProductDetailContent({
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-2">
               <a
-                href={product.product_url}
+                href={buyLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
@@ -245,16 +311,17 @@ export function ProductDetailContent({
                     product_name: product.name,
                     product_brand: product.brand,
                     product_price: product.price,
-                    product_url: product.product_url,
+                    product_url: buyLink,
+                    store_name: primaryStore?.name,
                     in_stock: product.available,
-                    has_rating: false,
-                    rating: null,
+                    has_rating: !!immersiveData?.rating,
+                    rating: immersiveData?.rating,
                   });
                 }}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 bg-accent-2 hover:bg-accent-2/90 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 <ShoppingCart className="h-4 w-4" />
-                Buy Product
+                {primaryStore ? `Buy at ${primaryStore.name}` : 'Buy Product'}
               </a>
               <button
                 onClick={() => {
@@ -306,16 +373,7 @@ export function ProductDetailContent({
                     in_stock: inStock,
                   });
                 
-                  // Convert to studio product format
-                  const studioProduct = {
-                    id: product.id,
-                    title: product.name,
-                    brand: product.brand || 'Unknown',
-                    image: product.image_url || '',
-                    sourceData: product as Record<string, any>,
-                  };
-                
-                  addToSelected(studioProduct);
+                  toast.info("Find Similar Coming Soon...");
                 }}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors"
               >
@@ -338,139 +396,161 @@ export function ProductDetailContent({
               </button>
             </div>
 
-            {/* Enrichment Loading Indicator */}
-            {isEnriching && !enrichedData && (
-              <div className="flex items-center justify-center gap-2 py-2 text-xs text-gray-500 dark:text-gray-400">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Loading detailed info...
+            {/* Immersive Error - Silent fallback */}
+            {immersiveError && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-2 bg-yellow-50 dark:bg-yellow-900/10 rounded">
+                ⚠️ Could not load detailed information. Showing basic info only.
               </div>
             )}
 
-            {/* Enrichment Error - Silent fallback with optional retry */}
-            {enrichmentStatus === 'error' && enrichmentError && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-1">
-                Showing basic info only
-              </div>
-            )}
-
-            {/* Description - Enhanced with enriched summary */}
-            {(isEnriching && !enrichedData) ? (
-              // Skeleton for description
+            {/* Store Comparison - From immersive data */}
+            {immersiveData?.stores && immersiveData.stores.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Package className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                  <div className="h-4 w-24 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
-                </div>
-                <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse w-full" />
-                  <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse w-5/6" />
-                  <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse w-4/6" />
-                </div>
-              </div>
-            ) : enrichedData?.description_summary && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Package className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Description</h4>
-                  {isCached && enrichedData?.description_summary && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">✓</span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {enrichedData?.description_summary}
-                </p>
-              </div>
-            )}
-
-            {/* Materials - From enriched data */}
-            {isEnriching && !enrichedData ? (
-              // Skeleton for materials
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Package className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                  <div className="h-4 w-20 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
-                </div>
-                <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse w-3/4" />
-              </div>
-            ) : enrichedData?.materials_summary && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Package className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Materials</h4>
-                </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {enrichedData.materials_summary}
-                </p>
-              </div>
-            )}
-
-            {/* Sizing Info - From enriched data */}
-            {isEnriching && !enrichedData ? (
-              // Skeleton for sizing
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Ruler className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                  <div className="h-4 w-24 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
-                </div>
-                <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse w-2/3" />
-              </div>
-            ) : enrichedData?.sizing_info && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Ruler className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Sizing & Fit</h4>
-                </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {enrichedData.sizing_info}
-                </p>
-              </div>
-            )}
-
-            {/* Attributes from metadata */}
-            {product.metadata && Object.keys(product.metadata).length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Details</h4>
-                <dl className="grid grid-cols-2 gap-2">
-                  {Object.entries(product.metadata).map(([key, value]) => (
-                    value && (
-                      <div key={key} className="text-xs">
-                        <dt className="font-medium text-gray-600 dark:text-gray-400 capitalize">
-                          {key.replace(/_/g, ' ')}
-                        </dt>
-                        <dd className="text-gray-900 dark:text-white mt-0.5">
-                          {String(value)}
-                        </dd>
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                  Available at {immersiveData.stores.length} store{immersiveData.stores.length > 1 ? 's' : ''}
+                </h4>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {immersiveData.stores.slice(0, 5).map((store, idx) => (
+                    <a
+                      key={idx}
+                      href={store.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => {
+                        posthog.capture(`${eventPrefix}_store_link_clicked`, {
+                          product_id: product.id,
+                          store_name: store.name,
+                          store_price: store.extracted_price,
+                        });
+                      }}
+                      className="block p-3 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {store.logo && (
+                            <img src={store.logo} alt={store.name} className="h-6 w-6 object-contain shrink-0" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{store.name}</p>
+                            {store.shipping && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{store.shipping}</p>
+                            )}
+                            {store.rating && store.reviews && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                <span className="text-xs text-gray-600 dark:text-gray-400">
+                                  {store.rating} ({store.reviews})
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 ml-3">
+                          <p className="font-bold text-gray-900 dark:text-white">{store.price}</p>
+                          {store.discount && (
+                            <p className="text-xs text-green-600 dark:text-green-400">{store.discount}</p>
+                          )}
+                        </div>
                       </div>
-                    )
+                    </a>
                   ))}
-                </dl>
+                </div>
               </div>
             )}
 
-            {/* Customer Reviews - Enhanced with enriched summary */}
-            {isEnriching && !enrichedData ? (
-              // Skeleton for reviews
-              <div className="pt-4 border-t border-gray-200 dark:border-zinc-700">
+            {/* Description & Features - From immersive data */}
+            {(immersiveData?.about_the_product || immersiveData?.title) && (
+              <div className="border-t border-gray-200 dark:border-zinc-700 pt-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                  <div className="h-4 w-32 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
+                  <Package className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">About This Product</h4>
                 </div>
-                <div className="p-3 bg-gray-100 dark:bg-zinc-800 rounded-lg space-y-2">
-                  <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse w-full" />
-                  <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse w-5/6" />
-                  <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse w-4/6" />
-                </div>
+                
+                {/* Show description from about_the_product or fallback to product name */}
+                {immersiveData?.about_the_product?.description ? (
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+                    {immersiveData.about_the_product.description}
+                  </p>
+                ) : immersiveData?.title && (
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+                    {immersiveData.title}
+                  </p>
+                )}
+
+                {immersiveData?.about_the_product?.features && immersiveData.about_the_product.features.length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-semibold text-gray-900 dark:text-white mb-2 uppercase tracking-wide">Key Features</h5>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {immersiveData.about_the_product.features.map((feature, idx) => (
+                        <div key={idx} className="text-xs">
+                          <dt className="font-medium text-gray-600 dark:text-gray-400">
+                            {feature.title}
+                          </dt>
+                          <dd className="text-gray-900 dark:text-white mt-0.5">
+                            {feature.value}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
               </div>
-            ) : enrichedData?.reviews_summary ? (
+            )}
+
+            {/* Customer Reviews - From immersive data */}
+            {immersiveData?.user_reviews && immersiveData.user_reviews.length > 0 ? (
               <div className="pt-4 border-t border-gray-200 dark:border-zinc-700">
                 <div className="flex items-center gap-2 mb-3">
                   <MessageSquare className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Customer Reviews</h4>
+                  {immersiveData.rating && (
+                    <div className="flex items-center gap-1 ml-auto">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-medium">{immersiveData.rating}</span>
+                      {immersiveData.reviews && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">({immersiveData.reviews})</span>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="p-3 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {enrichedData.reviews_summary}
-                  </p>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {immersiveData.user_reviews.slice(0, 5).map((review, idx) => (
+                    <div key={idx} className="p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={cn(
+                                "h-3 w-3",
+                                i < review.rating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300 dark:text-gray-600"
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">{review.user_name}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{review.date}</span>
+                      </div>
+                      {review.title && (
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{review.title}</p>
+                      )}
+                      <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-4">{review.text}</p>
+                      {review.images && review.images.length > 0 && (
+                        <div className="flex gap-2 mt-2">
+                          {review.images.slice(0, 3).map((img, imgIdx) => (
+                            <img
+                              key={imgIdx}
+                              src={img}
+                              alt="Review"
+                              className="h-12 w-12 object-cover rounded"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : showReviews && (
