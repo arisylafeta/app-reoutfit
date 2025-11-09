@@ -25,12 +25,12 @@ const Suggested = ({ isLoading: _isLoading = false }: { isLoading?: boolean }) =
           >
             <div className="flex-1 flex items-end">
               <h3 className="text-sm sm:text-base font-medium leading-tight">
-                Find my perfect Autumn look
+                Find my perfect Winter look
               </h3>
             </div>
             <div className="ml-3 h-full w-1/3 overflow-hidden rounded-lg relative">
               <Image
-                src="/suggestions/autumn-fit.jpeg"
+                src="/suggestions/winter-outfit.png"
                 alt="Autumn fit example"
                 fill
                 className="object-cover"

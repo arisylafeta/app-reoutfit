@@ -100,12 +100,16 @@ export function ShoppingResults(props: ShoppingResultsProps) {
     return Array.from(brands).sort();
   }, [products]);
 
+  // Convert Set to Array for stable dependency
+  const selectedBrandsArray = useMemo(() => Array.from(selectedBrands), [selectedBrands]);
+
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     let filtered = [...products];
 
-    if (selectedBrands.size > 0) {
-      filtered = filtered.filter(p => p.brand && selectedBrands.has(p.brand));
+    if (selectedBrandsArray.length > 0) {
+      const brandsSet = new Set(selectedBrandsArray);
+      filtered = filtered.filter(p => p.brand && brandsSet.has(p.brand));
     }
     
     if (inStockOnly) {
@@ -130,7 +134,7 @@ export function ShoppingResults(props: ShoppingResultsProps) {
     }
 
     return filtered;
-  }, [products, selectedBrands, inStockOnly, sortBy]);
+  }, [products, selectedBrandsArray, inStockOnly, sortBy]);
 
   return (
     <>

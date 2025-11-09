@@ -48,7 +48,7 @@ export function ProductDetailContent({
   showReviews = false,
   eventPrefix = "product",
 }: ProductDetailContentProps) {
-  const { removeFromSelected, state: studioState } = useStudio();
+  const { addToSelected, removeFromSelected, state: studioState } = useStudio();
   const inStock = product.available;
 
   // State for save to wardrobe functionality
@@ -340,7 +340,16 @@ export function ProductDetailContent({
                     });
                   } else {
                     // Add product to Studio
-    
+                    const studioProduct = {
+                      id: product.id,
+                      title: product.name,
+                      brand: product.brand || 'Unknown',
+                      image: product.image_url || '',
+                      sourceData: product as Record<string, any>,
+                    };
+                    
+                    addToSelected(studioProduct);
+
                     // Track addition event
                     posthog.capture(`${eventPrefix}_product_selected_for_studio`, {
                       product_id: product.id,
@@ -373,7 +382,7 @@ export function ProductDetailContent({
                     in_stock: inStock,
                   });
                 
-                  toast.info("Find Similar Coming Soon...");
+                  toast.info("Coming soon! We're working on visual similarity search.");
                 }}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors"
               >

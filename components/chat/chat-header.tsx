@@ -83,12 +83,14 @@ export function ChatHeader(props: {
 
         {/* Logo */}
         {!opened && (
-          <Image
-            src="/logo.png"
-            alt="Reoutfit"
-            width={36}
-            height={36}
-          />
+          <a href="https://app.reoutfit.me" className="cursor-pointer">
+            <Image
+              src="/logo.png"
+              alt="Reoutfit"
+              width={36}
+              height={36}
+            />
+          </a>
         )}
       </div>
     </header>

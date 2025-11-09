@@ -88,7 +88,11 @@ function ScrollToBottom() {
   );
 }
 
-export function Thread() {
+interface ThreadProps {
+  initialQuery?: string;
+}
+
+export function Thread({ initialQuery }: ThreadProps = {}) {
   const router = useRouter();
   const {
     artifactContext,
@@ -174,6 +178,22 @@ export function Thread() {
 
   const lastError = useRef<string | undefined>(undefined);
   const prevMessagesLength = useRef(messages.length);
+  const hasAutoSent = useRef(false);
+
+  // Auto-send initial query from landing page
+  useEffect(() => {
+    if (initialQuery && !hasAutoSent.current && !isLoading && messages.length === 0) {
+      hasAutoSent.current = true;
+      setInput(initialQuery);
+      // Small delay to ensure input is set before submitting
+      setTimeout(() => {
+        const form = document.querySelector('form');
+        if (form) {
+          form.requestSubmit();
+        }
+      }, 100);
+    }
+  }, [initialQuery, isLoading, messages.length, setInput]);
 
   // Auto-scroll to bottom when new messages arrive or when loading starts
   useEffect(() => {

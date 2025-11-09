@@ -55,6 +55,17 @@ export function BottomActions() {
         productUrls: currentOutfit.map(product => product.image),
       };
 
+      console.log('🎨 [FRONTEND] Generating look with request body:', {
+        avatarUrl: requestBody.avatarUrl,
+        isAvatar: requestBody.isAvatar,
+        productCount: requestBody.products.length,
+        products: requestBody.products,
+        selectedAvatar: {
+          image_url: selectedAvatar.image_url,
+          isAvatar: selectedAvatar.isAvatar,
+        },
+      });
+
       // Call generate API
       const response = await fetch('/api/studio/generate-look', {
         method: 'POST',
@@ -72,6 +83,12 @@ export function BottomActions() {
 
       const data = await response.json();
 
+      console.log('✅ [FRONTEND] Received response from API:', {
+        hasGeneratedImage: !!data.generatedImage,
+        imageUrlPrefix: data.generatedImage?.substring(0, 50) + '...',
+        processingTimeMs: data.processingTimeMs,
+      });
+
       // Use atomic update to set both generatedLook and stop generating in one state update
       setGeneratedLookAndStopGenerating({
         imageUrl: data.generatedImage,
@@ -87,7 +104,7 @@ export function BottomActions() {
       toast.success("Look generated successfully!");
 
     } catch (error: any) {
-      console.error('Generation error:', error);
+      console.error('❌ [FRONTEND] Generation error:', error);
       toast.error(error.message || "Failed to generate look. Please try again.");
       
       // Track failure

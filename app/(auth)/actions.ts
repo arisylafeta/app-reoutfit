@@ -75,7 +75,18 @@ export async function loginUser(currentState: { message: string; success?: boole
   }
 
   revalidatePath('/', 'layout')
-  redirect('/')
+  
+  // Check for redirect parameter
+  const redirectTo = formData.get('redirect') as string
+  const query = formData.get('q') as string
+  
+  if (redirectTo && query) {
+    redirect(`${redirectTo}?q=${encodeURIComponent(query)}`)
+  } else if (redirectTo) {
+    redirect(redirectTo)
+  } else {
+    redirect('/')
+  }
 }
 
 

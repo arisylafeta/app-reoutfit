@@ -14,6 +14,8 @@ interface SignInPageProps {
   title?: React.ReactNode;
   description?: React.ReactNode;
   heroImageSrc?: string;
+  redirectTo?: string;
+  query?: string;
 }
 
 // --- MAIN COMPONENT ---
@@ -23,6 +25,8 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   title = <span className="font-light text-foreground tracking-tighter">Welcome</span>,
   description = "Access your account and continue your journey with us",
   heroImageSrc = '', //replace with image from internet
+  redirectTo,
+  query,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   type LoginState = { message: string; success?: boolean }
@@ -61,6 +65,10 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             )}
 
             <form className="space-y-5" action={loginAction}>
+              {/* Hidden inputs for redirect flow */}
+              {redirectTo && <input type="hidden" name="redirect" value={redirectTo} />}
+              {query && <input type="hidden" name="q" value={query} />}
+              
               <div className="animate-element animate-delay-300">
                 <label className="text-sm font-medium text-muted-foreground">Email Address</label>
                 <GlassInputWrapper>

@@ -141,11 +141,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { avatarUrl, productUrls, products, isAvatar } = body;
 
+    console.log('📥 [BACKEND] Received request body:', {
+      avatarUrl,
+      isAvatar,
+      productsLength: products?.length,
+      productUrlsLength: productUrls?.length,
+      products: products?.map((p: any) => ({
+        url: p.url?.substring(0, 50) + '...',
+        role: p.role,
+        category: p.category,
+      })),
+    });
+
     // Support two formats:
     // 1. Legacy: { avatarUrl, productUrls: string[] }
     // 2. New: { avatarUrl, products: Array<{ url: string, category?: string, role?: string }>, isAvatar?: boolean }
     const productsList = products || productUrls?.map((url: string) => ({ url })) || [];
     const isActualAvatar = isAvatar ?? true; // Default to true if not specified
+
+    console.log('🔧 [BACKEND] Processed inputs:', {
+      productsListLength: productsList.length,
+      isActualAvatar,
+    });
 
     // 3. Validate inputs
     if (!avatarUrl || typeof avatarUrl !== 'string') {
@@ -182,10 +199,16 @@ export async function POST(request: NextRequest) {
     let avatarBase64: string;
     let avatarMimeType: string;
     
+    console.log('🖼️ [BACKEND] Fetching avatar image from:', avatarUrl.substring(0, 100) + '...');
+    
     try {
       const avatarData = await fetchImageAsBase64(avatarUrl);
       avatarBase64 = avatarData.base64;
       avatarMimeType = avatarData.mimeType;
+      console.log('✅ [BACKEND] Avatar fetched successfully:', {
+        mimeType: avatarMimeType,
+        base64Length: avatarBase64.length,
+      });
     } catch (error: any) {
       console.error('Failed to fetch avatar image:', error);
       return NextResponse.json(
@@ -198,6 +221,8 @@ export async function POST(request: NextRequest) {
     const productImages: Array<{ base64: string; mimeType: string; role?: string; category?: string }> = [];
     const failedProducts: number[] = [];
 
+    console.log(`🖼️ [BACKEND] Fetching ${productsList.length} product images...`);
+
     for (let i = 0; i < productsList.length; i++) {
       try {
         const product = productsList[i];
@@ -209,8 +234,13 @@ export async function POST(request: NextRequest) {
           role: typeof product === 'object' ? product.role : undefined,
           category: typeof product === 'object' ? product.category : undefined,
         });
+        console.log(`✅ [BACKEND] Product ${i + 1} fetched:`, {
+          mimeType: productData.mimeType,
+          base64Length: productData.base64.length,
+          role: typeof product === 'object' ? product.role : undefined,
+        });
       } catch (error: any) {
-        console.error(`Failed to fetch product image ${i}:`, error);
+        console.error(`❌ [BACKEND] Failed to fetch product image ${i}:`, error);
         failedProducts.push(i + 1);
       }
     }
@@ -272,50 +302,39 @@ export async function POST(request: NextRequest) {
       labeledItems.push(label);
     });
 
-    // Construct prompt - optimized for virtual try-on quality with labeled images
+    // Construct prompt - simplified for better compatibility
     // Different prompts based on whether we're using an actual avatar or a previous look
     const promptText = isActualAvatar
-      ? `You are an expert virtual fashion stylist performing a precise virtual try-on task.
+      ? `Virtual try-on assistant for e-commerce. Help shoppers visualize clothing before purchase.
 
-INPUT IMAGES (in order):
-${labeledItems.map((label, idx) => `${idx + 1}. ${label.toUpperCase()}`).join('\n')}
-${labeledItems.length + 1}. AVATAR (the person to dress)
+IMAGES:
+${labeledItems.map((label, idx) => `${idx + 1}. ${label} (clothing item)`).join('\n')}
+${labeledItems.length + 1}. Person (avatar)
 
-TASK:
-Create a photorealistic image showing the person in image ${labeledItems.length + 1} (the avatar) wearing ALL the clothing items from images 1-${labeledItems.length}.
+TASK: Show the person from image ${labeledItems.length + 1} wearing the clothing from images 1-${labeledItems.length}.
 
-CRITICAL REQUIREMENTS:
-1. PRESERVE THE PERSON: Keep the avatar's exact face, facial features, skin tone, hair, body proportions, and pose UNCHANGED
-2. CLOTHING ACCURACY: Dress the person in the exact clothing items shown - maintain their original style, color, pattern, and design details
-3. NATURAL FIT: Make the clothing fit naturally on the person's body shape
-4. LAYERING: If multiple items are provided, layer them appropriately (e.g., shirts under jackets, accessories on top)
-5. LIGHTING & REALISM: Match the lighting and environment of the avatar image - ensure realistic shadows, fabric draping, and wrinkles
-6. BACKGROUND: Keep the original background from the avatar image
-7. QUALITY: Output must be photorealistic with high detail - no cartoon/anime style
-8. DIMENSIONS: Match the exact aspect ratio and dimensions of the avatar image
+REQUIREMENTS:
+- Keep the person's face, body, and pose exactly the same
+- Dress them in the clothing items shown
+- Make it look natural and realistic
+- Keep the original background
 
-OUTPUT: A single photorealistic image of the person wearing the specified clothing items.`
-      : `You are an expert virtual fashion stylist performing a clothing replacement and outfit remix task.
+Generate a photorealistic image.`
+      : `Virtual try-on assistant for e-commerce. Help shoppers remix outfits.
 
-INPUT IMAGES (in order):
-${labeledItems.map((label, idx) => `${idx + 1}. ${label.toUpperCase()}`).join('\n')}
-${labeledItems.length + 1}. REFERENCE LOOK (existing outfit to modify)
+IMAGES:
+${labeledItems.map((label, idx) => `${idx + 1}. ${label} (new clothing)`).join('\n')}
+${labeledItems.length + 1}. Person in current outfit
 
-TASK:
-Create a photorealistic image showing the person from image ${labeledItems.length + 1} wearing the NEW clothing items from images 1-${labeledItems.length}, REPLACING the clothes they're currently wearing.
+TASK: Show the person from image ${labeledItems.length + 1} wearing the NEW clothing from images 1-${labeledItems.length}.
 
-CRITICAL REQUIREMENTS:
-1. PRESERVE THE PERSON: Keep the person's exact face, facial features, skin tone, hair, body proportions, and pose UNCHANGED
-2. REPLACE CLOTHING: Remove the existing clothes from the reference look and dress the person in the NEW clothing items from images 1-${labeledItems.length}
-3. CLOTHING ACCURACY: Use the exact clothing items shown in images 1-${labeledItems.length} - maintain their original style, color, pattern, and design details
-4. NATURAL FIT: Make the new clothing fit naturally on the person's body shape
-5. LAYERING: If multiple new items are provided, layer them appropriately (e.g., shirts under jackets, accessories on top)
-6. LIGHTING & REALISM: Match the lighting and environment of the reference look - ensure realistic shadows, fabric draping, and wrinkles
-7. BACKGROUND: Keep the original background from the reference look
-8. QUALITY: Output must be photorealistic with high detail - no cartoon/anime style
-9. DIMENSIONS: Match the exact aspect ratio and dimensions of the reference look
+REQUIREMENTS:
+- Keep the person's face, body, and pose exactly the same
+- Replace their current clothes with the new items
+- Make it look natural and realistic
+- Keep the original background
 
-OUTPUT: A single photorealistic image of the person wearing the NEW clothing items, with their original outfit replaced.`;
+Generate a photorealistic image.`;
 
     // 7c. Prepare prompt parts using Files API URIs or inline data
     let promptParts: any[];
@@ -352,7 +371,12 @@ OUTPUT: A single photorealistic image of the person wearing the NEW clothing ite
       ];
     }
 
-    console.log('Generated prompt with', promptParts.length, 'parts');
+    console.log('📝 [BACKEND] Generated prompt with', promptParts.length, 'parts');
+    console.log('📝 [BACKEND] Prompt type:', isActualAvatar ? 'AVATAR MODE' : 'LOOK REPLACEMENT MODE');
+    console.log('📝 [BACKEND] MIME types being sent to Gemini:', {
+      avatar: avatarMimeType,
+      products: productImages.map((p, i) => ({ index: i + 1, mimeType: p.mimeType })),
+    });
 
     // Save debug logs (images + prompt) to disk
     await saveDebugLogs(avatarBase64, avatarMimeType, productImages, promptText);
@@ -360,7 +384,10 @@ OUTPUT: A single photorealistic image of the person wearing the NEW clothing ite
     // 8. Call Gemini API with timeout
     const generationPromise = genAI.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: promptParts,
+      contents: [{
+        role: 'user',
+        parts: promptParts,
+      }],
     });
     
     const timeoutPromise = new Promise((_, reject) => {
@@ -402,9 +429,22 @@ OUTPUT: A single photorealistic image of the person wearing the NEW clothing ite
       throw new Error('Content generation blocked by safety filters');
     }
 
+    // Check for IMAGE_OTHER (image generation refusal)
+    if (result.candidates?.[0]?.finishReason === 'IMAGE_OTHER') {
+      console.error('❌ Image generation refused with IMAGE_OTHER reason');
+      console.error('This usually means:');
+      console.error('  - Input images are incompatible or problematic');
+      console.error('  - The task violates some policy');
+      console.error('  - The model cannot process the request');
+      throw new Error('Image generation refused by AI model. Please try different images or a simpler outfit.');
+    }
+
     // Extract the generated image from response
     let generatedImageDataUrl = `data:${avatarMimeType};base64,${avatarBase64}`; // Fallback to avatar
     let imageFound = false;
+
+    console.log('🔍 [BACKEND] Extracting image from Gemini response...');
+    console.log('🔍 [BACKEND] Fallback avatar data URL length:', generatedImageDataUrl.length);
 
     if (result.candidates && result.candidates[0]?.content?.parts) {
       const parts = result.candidates[0].content.parts;
@@ -445,10 +485,18 @@ OUTPUT: A single photorealistic image of the person wearing the NEW clothing ite
     }
 
     if (!imageFound) {
-      console.warn('⚠️ No generated image in response, using avatar as fallback');
+      console.warn('⚠️ [BACKEND] No generated image in response, using avatar as fallback');
+      console.warn('⚠️ [BACKEND] This means the API is returning the ORIGINAL avatar image!');
     }
 
     const processingTimeMs = Date.now() - startTime;
+
+    console.log('📤 [BACKEND] Sending response:', {
+      imageFound,
+      generatedImageDataUrlLength: generatedImageDataUrl.length,
+      generatedImagePrefix: generatedImageDataUrl.substring(0, 50) + '...',
+      processingTimeMs,
+    });
 
     return NextResponse.json({
       generatedImage: generatedImageDataUrl,
