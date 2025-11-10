@@ -23,7 +23,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
       <CardContent className="p-0">
         <div className="relative aspect-square overflow-hidden">
           <img
-            src={product.image || '/products.png'}
+            src={product.image_url || product.image || '/products.png'}
             alt={product.name}
             className="w-full h-full object-cover"
           />

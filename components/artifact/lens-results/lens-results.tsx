@@ -671,6 +671,7 @@ export function LensResults(props: LensResultsProps) {
                 onClose={() => setIsDrawerOpen(false)}
                 showReviews={true}
                 eventPrefix="lens"
+                useEnrichmentAPI={true}
               />
             )}
           </ArtifactDrawer>

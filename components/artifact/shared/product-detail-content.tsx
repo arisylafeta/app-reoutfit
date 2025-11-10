@@ -9,12 +9,14 @@ import { useStudio } from "@/providers/studio-provider";
 import type { Product } from "@/types/product";
 import { toast } from "sonner";
 import { useImmersiveProduct } from "@/hooks/use-immersive-product";
+import { useProductEnrichment } from "@/hooks/use-product-enrichment";
 
 type ProductDetailContentProps = {
   product: Product;
   onClose?: () => void;
   showReviews?: boolean;
   eventPrefix?: string;
+  useEnrichmentAPI?: boolean; // true = old enrich API (lens-results), false = new immersive API (shopping-results)
 };
 
 /**
@@ -47,32 +49,61 @@ export function ProductDetailContent({
   onClose,
   showReviews = false,
   eventPrefix = "product",
+  useEnrichmentAPI = false, // Default to new immersive API for shopping-results
 }: ProductDetailContentProps) {
   const { addToSelected, removeFromSelected, state: studioState } = useStudio();
   const inStock = product.available;
+  
+  // Get product image from multiple possible fields
+  const productImage = product.image_url || product.image || (product as any).image_link || null;
 
   // State for save to wardrobe functionality
   const [isSaving, setIsSaving] = React.useState(false);
   const [isSaved, setIsSaved] = React.useState(false);
 
-  // SerpAPI Immersive Product hook - fetches detailed product info
+  // Conditional API usage:
+  // - lens-results: use old Firecrawl enrichment API (useEnrichmentAPI = true)
+  // - shopping-results: use new SerpAPI Immersive Product API (useEnrichmentAPI = false)
+  
+  // Old Firecrawl enrichment hook (for lens-results)
+  const {
+    enrichedData,
+    error: enrichmentError,
+    isLoading: isEnriching,
+  } = useProductEnrichment(
+    product.id,
+    product.product_url,
+    false // Don't auto-enrich, prefetch handles it
+  );
+
+  // New SerpAPI Immersive Product hook (for shopping-results)
+  // Only pass token if NOT using enrichment API (prevents unnecessary fetch)
   const {
     data: immersiveData,
     isLoading: isLoadingImmersive,
     error: immersiveError,
   } = useImmersiveProduct(
     product.id,
-    product.metadata?.immersive_product_token as string | undefined
+    useEnrichmentAPI ? undefined : (product.metadata?.immersive_product_token as string | undefined)
   );
 
-  // Use immersive price range or product price
-  const displayPrice = product.price ?? 0;
-  const displayCurrency = product.currency ?? 'USD';
+  // Use enriched/immersive price or product price
+  const displayPrice = useEnrichmentAPI 
+    ? (enrichedData?.price ?? product.price ?? 0)
+    : (product.price ?? 0);
+  const displayCurrency = useEnrichmentAPI
+    ? (enrichedData?.currency ?? product.currency ?? 'USD')
+    : (product.currency ?? 'USD');
   const hasDisplayPrice = displayPrice > 0;
   
   // Get first store for "Buy Product" button
   const primaryStore = immersiveData?.stores?.[0];
   const buyLink = primaryStore?.link || product.product_url;
+  
+  // Determine loading state based on which API is being used
+  const isLoading = useEnrichmentAPI ? isEnriching : isLoadingImmersive;
+  const hasData = useEnrichmentAPI ? !!enrichedData : !!immersiveData;
+  const apiError = useEnrichmentAPI ? enrichmentError : immersiveError;
 
   // Format price with currency symbol
   const formatPrice = (price: number, currency: string) => {
@@ -143,8 +174,8 @@ export function ProductDetailContent({
     }
   };
 
-  // Loading skeleton
-  if (isLoadingImmersive && !immersiveData) {
+  // Loading skeleton - only show if loading and no error
+  if (isLoading && !hasData && !apiError) {
     return (
       <>
         <DrawerTitle className="sr-only">{product.name}</DrawerTitle>
@@ -153,9 +184,9 @@ export function ProductDetailContent({
             {/* Left Column - Image Skeleton */}
             <div>
               <div className="bg-gray-200 dark:bg-zinc-800 lg:rounded-lg overflow-hidden lg:h-[60vh] animate-pulse flex items-center justify-center">
-                {product.image_url ? (
+                {productImage ? (
                   <img
-                    src={product.image_url}
+                    src={productImage}
                     alt={product.name}
                     className="w-full h-auto lg:h-full object-contain opacity-50"
                   />
@@ -228,9 +259,9 @@ export function ProductDetailContent({
           {/* Left Column - Product Image Only */}
           <div>
             <div className="bg-white dark:bg-zinc-900 lg:rounded-lg overflow-hidden lg:sticky lg:top-0 flex items-center justify-center lg:h-[60vh]">
-              {product.image_url ? (
+              {productImage ? (
                 <img
-                  src={product.image_url}
+                  src={productImage}
                   alt={product.name}
                   className="w-full h-auto lg:h-full object-contain"
                 />
@@ -259,7 +290,7 @@ export function ProductDetailContent({
             {/* Price and Stock */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {isLoadingImmersive && !immersiveData ? (
+                {isLoading && !hasData ? (
                   // Skeleton with fallback to existing price
                   <div className="flex items-center gap-2">
                     {product.price && product.price > 0 ? (
@@ -405,15 +436,62 @@ export function ProductDetailContent({
               </button>
             </div>
 
-            {/* Immersive Error - Silent fallback */}
-            {immersiveError && (
+            {/* API Error - Silent fallback */}
+            {apiError && (
               <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-2 bg-yellow-50 dark:bg-yellow-900/10 rounded">
                 ⚠️ Could not load detailed information. Showing basic info only.
               </div>
             )}
 
-            {/* Store Comparison - From immersive data */}
-            {immersiveData?.stores && immersiveData.stores.length > 0 && (
+            {/* Enrichment Loading Indicator - Only for enrichment API */}
+            {useEnrichmentAPI && isEnriching && !enrichedData && (
+              <div className="flex items-center justify-center gap-2 py-2 text-xs text-gray-500 dark:text-gray-400">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Loading detailed info...
+              </div>
+            )}
+
+            {/* Description - From enriched data (enrichment API only) */}
+            {useEnrichmentAPI && enrichedData?.description_summary && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Description</h4>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {enrichedData.description_summary}
+                </p>
+              </div>
+            )}
+
+            {/* Materials - From enriched data (enrichment API only) */}
+            {useEnrichmentAPI && enrichedData?.materials_summary && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Materials</h4>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {enrichedData.materials_summary}
+                </p>
+              </div>
+            )}
+
+            {/* Sizing Info - From enriched data (enrichment API only) */}
+            {useEnrichmentAPI && enrichedData?.sizing_info && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Sizing & Fit</h4>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {enrichedData.sizing_info}
+                </p>
+              </div>
+            )}
+
+            {/* Store Comparison - From immersive data (immersive API only) */}
+            {!useEnrichmentAPI && immersiveData?.stores && immersiveData.stores.length > 0 && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
                   Available at {immersiveData.stores.length} store{immersiveData.stores.length > 1 ? 's' : ''}
@@ -467,8 +545,8 @@ export function ProductDetailContent({
               </div>
             )}
 
-            {/* Description & Features - From immersive data */}
-            {(immersiveData?.about_the_product || immersiveData?.title) && (
+            {/* Description & Features - From immersive data (immersive API only) */}
+            {!useEnrichmentAPI && (immersiveData?.about_the_product || immersiveData?.title) && (
               <div className="border-t border-gray-200 dark:border-zinc-700 pt-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Package className="h-4 w-4 text-gray-600 dark:text-gray-400" />
@@ -506,8 +584,20 @@ export function ProductDetailContent({
               </div>
             )}
 
-            {/* Customer Reviews - From immersive data */}
-            {immersiveData?.user_reviews && immersiveData.user_reviews.length > 0 ? (
+            {/* Customer Reviews - From enriched data (enrichment API) */}
+            {useEnrichmentAPI && enrichedData?.reviews_summary ? (
+              <div className="pt-4 border-t border-gray-200 dark:border-zinc-700">
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageSquare className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Customer Reviews</h4>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {enrichedData.reviews_summary}
+                  </p>
+                </div>
+              </div>
+            ) : !useEnrichmentAPI && immersiveData?.user_reviews && immersiveData.user_reviews.length > 0 ? (
               <div className="pt-4 border-t border-gray-200 dark:border-zinc-700">
                 <div className="flex items-center gap-2 mb-3">
                   <MessageSquare className="h-5 w-5 text-gray-600 dark:text-gray-400" />
