@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useStudio } from "@/providers/studio-provider";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
+import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
 /**
@@ -11,7 +13,7 @@ import { Loader2 } from "lucide-react";
  */
 export function LookDisplay() {
   const { state } = useStudio();
-  const { generatedLook, isGenerating, selectedAvatar } = state;
+  const { generatedLook, isGenerating, selectedAvatar, isLoadingAvatar } = state;
 
   return (
     <div className="relative w-full max-w-md">
@@ -31,8 +33,8 @@ export function LookDisplay() {
             alt="Your avatar"
             className={`h-full w-full object-cover transition-all ${isGenerating ? 'blur-sm' : ''}`}
           />
-        ) : (
-          // Default state (no avatar)
+        ) : isLoadingAvatar ? (
+          // Loading state
           <Empty className="gap-6">
             <EmptyHeader>
               <EmptyMedia>
@@ -45,6 +47,30 @@ export function LookDisplay() {
               <EmptyTitle>Loading...</EmptyTitle>
               <EmptyDescription>Please hang tight, we're loading your avatar</EmptyDescription>
             </EmptyHeader>
+          </Empty>
+        ) : (
+          // No avatar state (after loading)
+          <Empty className="gap-6">
+            <EmptyHeader>
+              <EmptyMedia>
+                <img
+                  src="/lookbook.png"
+                  alt="No avatar"
+                  className="w-40 h-40 rounded-full opacity-50"
+                />
+              </EmptyMedia>
+              <EmptyTitle>No Avatar Found</EmptyTitle>
+              <EmptyDescription>
+                You haven't created an avatar yet. Create one to start trying on outfits!
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Link href="/lookbook">
+                <Button variant="default" size="sm">
+                  Go to Lookbook
+                </Button>
+              </Link>
+            </EmptyContent>
           </Empty>
         )}
 

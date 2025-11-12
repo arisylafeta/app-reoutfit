@@ -21,9 +21,8 @@ import { wardrobeToStudioProduct } from "@/types/studio";
  * Button group for drawer triggers (Avatar, Wardrobe)
  */
 export function TopActions() {
-  const { setSelectedAvatar, state, addToSelected } = useStudio();
+  const { setSelectedAvatar, setLoadingAvatar, state, addToSelected } = useStudio();
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
-  const [isLoadingAvatar, setIsLoadingAvatar] = useState(false);
   const [showLooksDrawer, setShowLooksDrawer] = useState(false);
   const [showWardrobeDrawer, setShowWardrobeDrawer] = useState(false);
 
@@ -36,7 +35,7 @@ export function TopActions() {
     const loadAvatar = async () => {
       if (state.selectedAvatar) return; // Already loaded
 
-      setIsLoadingAvatar(true);
+      setLoadingAvatar(true);
       try {
         const response = await fetch('/api/lookbook/avatar');
         if (response.ok) {
@@ -48,12 +47,12 @@ export function TopActions() {
       } catch (error) {
         console.error('Failed to load avatar:', error);
       } finally {
-        setIsLoadingAvatar(false);
+        setLoadingAvatar(false);
       }
     };
 
     loadAvatar();
-  }, [setSelectedAvatar, state.selectedAvatar]);
+  }, [setSelectedAvatar, setLoadingAvatar, state.selectedAvatar]);
 
   const handleAvatarClick = () => {
     // Show looks drawer instead of avatar dialog
@@ -133,7 +132,7 @@ export function TopActions() {
           variant="outline"
           size="sm"
           onClick={handleAvatarClick}
-          disabled={isLoadingAvatar}
+          disabled={state.isLoadingAvatar}
         >
           <User className="size-4 mr-2" />
           Avatar

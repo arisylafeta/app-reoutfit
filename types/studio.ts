@@ -61,6 +61,8 @@ export interface StudioState {
   activeDrawer: 'wardrobe' | 'shopping' | 'looks' | null;
   /** Selected avatar for try-on (from lookbook system) */
   selectedAvatar: Avatar | null;
+  /** Loading state for avatar from database */
+  isLoadingAvatar: boolean;
 }
 
 /**

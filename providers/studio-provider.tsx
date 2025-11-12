@@ -23,6 +23,7 @@ interface StudioContextType {
   setGeneratedLookAndStopGenerating: (look: GeneratedLook) => void;
   setActiveDrawer: (drawer: 'wardrobe' | 'shopping' | 'looks' | null) => void;
   setSelectedAvatar: (avatar: Avatar | null) => void;
+  setLoadingAvatar: (isLoading: boolean) => void;
   // Computed values
   selectedCount: number;
   outfitCount: number;
@@ -45,6 +46,7 @@ const initialState: StudioState = {
   isGenerating: false,
   activeDrawer: null,
   selectedAvatar: null,
+  isLoadingAvatar: false,
 };
 
 /**
@@ -246,6 +248,16 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  /**
+   * Set loading avatar state
+   */
+  const setLoadingAvatar = useCallback((isLoading: boolean) => {
+    setState(prev => ({
+      ...prev,
+      isLoadingAvatar: isLoading,
+    }));
+  }, []);
+
   // Computed values
   const selectedCount = state.selectedProducts.length;
   const outfitCount = state.currentOutfit.length;
@@ -265,6 +277,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     setGeneratedLookAndStopGenerating,
     setActiveDrawer,
     setSelectedAvatar,
+    setLoadingAvatar,
     selectedCount,
     outfitCount,
     canAddToOutfit,
